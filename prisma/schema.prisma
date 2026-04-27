@@ -1,0 +1,89 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+enum Role {
+  admin
+  manager
+  user
+}
+
+model Department {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  createdAt DateTime @default(now())
+
+  users    User[]
+  projects Project[]
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+
+  role Role @default(user)
+
+  departmentId Int?
+  department   Department? @relation(fields: [departmentId], references: [id])
+
+  createdTasks  Task[] @relation("CreatedTasks")
+  assignedTasks Task[] @relation("AssignedTasks")
+
+  createdProjects Project[] @relation("CreatedProjects")
+}
+
+model Project {
+  id        Int      @id @default(autoincrement())
+  name      String
+  createdAt DateTime @default(now())
+
+  departmentId Int
+  department   Department @relation(fields: [departmentId], references: [id])
+
+  createdById Int  @map("userId")
+  createdBy   User @relation("CreatedProjects", fields: [createdById], references: [id])
+
+  tasks Task[]
+
+  @@unique([departmentId, name])
+}
+
+model Task {
+  id          Int       @id @default(autoincrement())
+  title       String
+  description String?
+  completed   Boolean   @default(false)
+  priority    Int       @default(2)
+  dueDate     DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  projectId Int?
+  project   Project? @relation(fields: [projectId], references: [id])
+
+  createdById Int  @map("userId")
+  createdBy   User @relation("CreatedTasks", fields: [createdById], references: [id])
+
+  assigneeId Int?
+  assignee   User? @relation("AssignedTasks", fields: [assigneeId], references: [id])
+
+  subtasks Subtask[]
+}
+
+model Subtask {
+  id        Int      @id @default(autoincrement())
+  title     String
+  completed Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  taskId Int
+  task   Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+}
